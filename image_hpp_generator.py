@@ -1,32 +1,37 @@
-import sys, os, itertools, re
+import argparse, os, itertools
+
 import PIL.GifImagePlugin
 import PIL.Image
 
-folder_name = sys.argv[1]
-picture_names = os.listdir(folder_name)
-picture_names.sort(key=lambda f: int(re.sub('\D', '', f)))
+from parse import rgb_tuple_to_rgb565_int, int_to_bytes
+
+def parse_args() -> argparse.Namespace:
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_folder")
+    parser.add_argument("--template", default="frame_%d.png")
+
+    return parser.parse_args()
+
+args = parse_args()
+
+input_folder = args.input_folder
+template = args.template
 
 output = open("Image.hpp", mode="w")
+image_counting = len(os.listdir(input_folder))
 
-for i in range(len(picture_names)):
-    image = PIL.Image.open(f"{folder_name}/{picture_names[i]}")
+for i in range(image_counting):
+    image = PIL.Image.open(os.path.join(input_folder, template % i))
     image = image.convert("RGB")
     pixels = list(image.getdata())
 
     output.write(f"const unsigned char data_{i}[] = {'{'}")
 
-    def to_rgb565(pixel):
-        (r, g, b) = pixel
-        return ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3)
-    
-    def to_bytes(pixel): return (
-        hex(pixel & 0xFF),
-        hex(pixel >> 8)
-    )
-
-    pixels = map(to_rgb565, pixels)
-    pixels = map(to_bytes, pixels)
+    pixels = map(rgb_tuple_to_rgb565_int, pixels)
+    pixels = map(int_to_bytes, pixels)
     pixels = itertools.chain.from_iterable(pixels)
+    pixels = map(hex, pixels)
     pixels = ",".join(pixels)
 
     output.write(pixels)
@@ -39,7 +44,7 @@ output.write(f"const unsigned char* datas[] = {'{'}")
 
 datas = map(
     lambda i: f"data_{i}", 
-    [i for i in range(len(picture_names))]
+    [i for i in range(image_counting)]
 )
 datas = ",".join(datas)
 output.write(datas)
