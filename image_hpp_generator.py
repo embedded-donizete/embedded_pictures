@@ -23,14 +23,14 @@ data_type = args.data_type
 output = open("Image.hpp", mode="w")
 image_counting = len(os.listdir(input_folder))
 
+output.write("#include <stdint.h>\n\n")
+
 for i in range(image_counting):
     image = PIL.Image.open(os.path.join(input_folder, template % i))
     image = image.convert("RGB")
     pixels = list(image.getdata())
 
-    output.write("#include <stdint.h>\n\n")
-
-    output.write(f"const {data_type} data_{i}[] = {'{'}")
+    output.write("const %s data_%s[] = {" % (data_type, i))
 
     pixels = map(rgb_tuple_to_rgb565_int, pixels)
     if data_type == "uint8_t":
@@ -45,7 +45,7 @@ for i in range(image_counting):
 
 output.write("\n")
 
-output.write(f"const {data_type}* datas[] = {'{'}")
+output.write("const %s *datas[] = {" % data_type)
 
 datas = map(
     lambda i: f"data_{i}", 
