@@ -10,6 +10,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("input_folder")
     parser.add_argument("--template", default="frame_%d.png")
+    parser.add_argument("--data_type", default="uint16_t", choices=["uint8_t", "uint16_t"])
 
     return parser.parse_args()
 
@@ -17,6 +18,7 @@ args = parse_args()
 
 input_folder = args.input_folder
 template = args.template
+data_type = args.data_type
 
 output = open("Image.hpp", mode="w")
 image_counting = len(os.listdir(input_folder))
@@ -26,11 +28,14 @@ for i in range(image_counting):
     image = image.convert("RGB")
     pixels = list(image.getdata())
 
-    output.write(f"const unsigned char data_{i}[] = {'{'}")
+    output.write("#include <stdint.h>\n\n")
+
+    output.write(f"const {data_type} data_{i}[] = {'{'}")
 
     pixels = map(rgb_tuple_to_rgb565_int, pixels)
-    pixels = map(int_to_bytes, pixels)
-    pixels = itertools.chain.from_iterable(pixels)
+    if data_type == "uint8_t":
+        pixels = map(int_to_bytes, pixels)
+        pixels = itertools.chain.from_iterable(pixels)
     pixels = map(hex, pixels)
     pixels = ",".join(pixels)
 
@@ -40,7 +45,7 @@ for i in range(image_counting):
 
 output.write("\n")
 
-output.write(f"const unsigned char* datas[] = {'{'}")
+output.write(f"const {data_type}* datas[] = {'{'}")
 
 datas = map(
     lambda i: f"data_{i}", 
